@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}My Files - XR Visualization Server{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>My Files</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{% url 'file_upload' %}" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload New File
+        </a>
+    </div>
+</div>
+
+{% if files %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Upload Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files %}
+                    <tr data-file-id="{{ file.id }}">
+                        <td>{{ file.original_filename }}</td>
+                        <td>{{ file.uploaded_at|date:"F d, Y H:i" }}</td>
+                        <td>
+                            {% if file.upload_status == 'upload_failed' %}
+                                <span class="badge bg-danger">Upload Failed</span>
+                            {% elif file.upload_status == 'uploading' %}
+                                <span class="badge bg-warning">Uploading</span>
+                            {% elif file.upload_status == 'uploaded' %}
+                            {% if file.processing_status == 'pending' %}
+                                <span class="badge bg-info">Ready for Processing</span>
+                            {% elif file.processing_status == 'processing' %}
+                                <span class="badge bg-warning">Processing</span>
+                            {% elif file.processing_status == 'completed' %}
+                                <span class="badge bg-success">Processing Complete</span>
+                            {% elif file.processing_status == 'failed' %}
+                                <span class="badge bg-danger">Processing Failed</span>
+                                {% endif %}
+                            {% endif %}
+                            {% if file.error_message %}
+                                <i class="fas fa-exclamation-circle text-danger" title="{{ file.error_message }}"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'file_detail' file.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            {% if file.processed_file %}
+                                <a href="{{ file.processed_file.url }}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-download"></i> Download
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'file_delete' file.id %}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> You haven't uploaded any files yet.
+        <a href="{% url 'file_upload' %}" class="alert-link">Upload your first file</a>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    function updateFileStatus() {
+        $('tr[data-file-id]').each(function() {
+            var row = $(this);
+            var fileId = row.data('file-id');
+            var statusCell = row.find('td:nth-child(3)');
+            
+            // Only update status for files that are uploaded and processing
+            if (statusCell.find('.badge').text().trim() === 'Processing') {
+                $.get(`/file/${fileId}/status/`, function(data) {
+                    var badgeClass = 'bg-secondary';
+                    var statusText = 'Unknown';
+                    
+                    if (data.upload_status === 'upload_failed') {
+                        badgeClass = 'bg-danger';
+                        statusText = 'Upload Failed';
+                    } else if (data.upload_status === 'uploading') {
+                        badgeClass = 'bg-warning';
+                        statusText = 'Uploading';
+                    } else if (data.upload_status === 'uploaded') {
+                        switch (data.processing_status) {
+                            case 'pending':
+                                badgeClass = 'bg-info';
+                                statusText = 'Ready for Processing';
+                                break;
+                            case 'processing':
+                                badgeClass = 'bg-warning';
+                                statusText = 'Processing';
+                                break;
+                            case 'completed':
+                                badgeClass = 'bg-success';
+                                statusText = 'Processing Complete';
+                                break;
+                            case 'failed':
+                                badgeClass = 'bg-danger';
+                                statusText = 'Processing Failed';
+                                break;
+                        }
+                    }
+                    
+                    // Update the badge
+                    var badge = statusCell.find('.badge');
+                    badge.removeClass('bg-warning bg-success bg-danger bg-info bg-secondary')
+                         .addClass(badgeClass)
+                         .text(statusText);
+                    
+                    // If there's an error message, show it
+                    if (data.error_message) {
+                        if (!statusCell.find('.fas.fa-exclamation-circle').length) {
+                            statusCell.append(
+                                `<i class="fas fa-exclamation-circle text-danger" title="${data.error_message}"></i>`
+                            );
+                        }
+                    }
+                    
+                    // Reload if processing is complete to show download button
+                    if (data.processing_status === 'completed') {
+                        location.reload();
+                    }
+                });
+            }
+        });
+    }
+
+    // Update status every 5 seconds for processing files
+    setInterval(updateFileStatus, 5000);
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,7 @@
+Django==5.0.2
+celery==5.3.6
+redis==5.0.1
+django-crispy-forms==2.1
+crispy-bootstrap4==2023.1
+python-dotenv==1.0.1
+gunicorn==21.2.0 

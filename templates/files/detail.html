@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}File Details - {{ file.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>File Details</h2>
+            <a href="{% url 'file_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Files
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ file.original_filename }}</h5>
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>File ID:</strong></div>
+                <div class="col-md-9">
+                    <code>{{ file.id }}</code>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ file.id }}')">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>Upload Date:</strong></div>
+                <div class="col-md-9">{{ file.uploaded_at|date:"F d, Y H:i" }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>Upload Status:</strong></div>
+                <div class="col-md-9">
+                    {% if file.upload_status == 'upload_failed' %}
+                        <span class="badge bg-danger">Upload Failed</span>
+                    {% elif file.upload_status == 'uploading' %}
+                        <span class="badge bg-warning">Uploading</span>
+                    {% elif file.upload_status == 'uploaded' %}
+                        <span class="badge bg-success">Uploaded</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>Processing Status:</strong></div>
+                <div class="col-md-9">
+                    {% if file.processing_status == 'pending' %}
+                        <span class="badge bg-info">Ready for Processing</span>
+                    {% elif file.processing_status == 'processing' %}
+                        <span class="badge bg-warning">Processing</span>
+                    {% elif file.processing_status == 'completed' %}
+                        <span class="badge bg-success">Processing Complete</span>
+                    {% elif file.processing_status == 'failed' %}
+                        <span class="badge bg-danger">Processing Failed</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if file.error_message %}
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>Error Message:</strong></div>
+                <div class="col-md-9">
+                    <div class="alert alert-danger">{{ file.error_message }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row mb-3">
+                <div class="col-md-3"><strong>API Endpoints:</strong></div>
+                <div class="col-md-9">
+                    <div class="mb-2">
+                        <strong>Status Check:</strong><br>
+                        <code>GET /file/{{ file.id }}/status/</code>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Start Processing:</strong><br>
+                        <code>POST /api/file/{{ file.id }}/process/</code>
+                        <div class="text-muted small">Send processing parameters as JSON in request body</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col">
+                    {% if file.processed_file %}
+                        <a href="{{ file.processed_file.url }}" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Processed File
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'file_delete' file.id %}" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete File
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Could add a toast notification here
+        alert('File ID copied to clipboard!');
+    }).catch(function(err) {
+        console.error('Failed to copy text: ', err);
+    });
+}
+
+// Update status every 5 seconds if file is processing
+$(document).ready(function() {
+    function updateStatus() {
+        if ($('.badge:contains("Processing")').length > 0) {
+            $.get('{% url "file_status" file.id %}', function(data) {
+                location.reload();
+            });
+        }
+    }
+    setInterval(updateStatus, 5000);
+});
+</script>
+{% endblock %} 
