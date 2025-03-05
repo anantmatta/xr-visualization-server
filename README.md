@@ -67,24 +67,3 @@ A Django-based system that allows users to login, submit files, and process them
 3. Select files and choose processing actions
 4. Monitor task progress in real-time
 5. Download processed results
-
-## Security Considerations
-
-- Files are stored securely with proper permissions
-- User authentication required for all operations
-- File type validation
-- Size limits on uploads
-- Secure task queuing and processing
-
-## Development
-
-To contribute to this project:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-MIT License 
